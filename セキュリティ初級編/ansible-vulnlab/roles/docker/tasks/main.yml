@@ -1,0 +1,39 @@
+---
+- name: Install Docker package
+  dnf:
+    name: docker
+    state: present
+
+- name: Enable and start Docker
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add ec2-user to docker group
+  user:
+    name: ec2-user
+    groups: docker
+    append: yes
+
+- name: Install Docker Compose binary
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/v2.29.0/docker-compose-{{ ansible_system }}-{{ ansible_architecture }}"
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'
+
+- name: Download vuln-lab package
+  get_url:
+    url: "{{ app_zip_url }}"
+    dest: "/tmp/vuln-lab.zip"
+
+- name: Unzip vuln-lab
+  unarchive:
+    src: "/tmp/vuln-lab.zip"
+    dest: "{{ app_dir }}"
+    remote_src: yes
+
+- name: Launch vuln-lab via Docker Compose
+  command: docker-compose up -d
+  args:
+    chdir: "{{ app_dir }}"

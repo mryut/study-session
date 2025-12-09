@@ -1,0 +1,23 @@
+---
+- name: Install Certbot packages
+  dnf:
+    name:
+      - certbot
+      - python3-certbot-nginx
+    state: present
+
+- name: Obtain Let's Encrypt certificate
+  command: >
+    certbot --nginx -d {{ domain_name }}
+            --non-interactive
+            --agree-tos
+            -m {{ admin_email }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ domain_name }}/fullchain.pem"
+
+- name: Setup automatic renewal
+  cron:
+    name: "Renew Let's Encrypt certificates"
+    job: "certbot renew --quiet"
+    minute: 0
+    hour: 3

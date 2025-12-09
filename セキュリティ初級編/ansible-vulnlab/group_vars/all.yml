@@ -1,0 +1,4 @@
+domain_name: "example.com"
+admin_email: "admin@example.com"
+app_zip_url: "https://raw.githubusercontent.com/mryut/study-session/refs/heads/master/セキュリティ初級編/vuln-lab-extended.zip"
+app_dir: "/home/ec2-user/.vuln-lab-extended"

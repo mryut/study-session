@@ -1,0 +1,21 @@
+---
+- name: Update all packages
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Install base packages
+  dnf:
+    name:
+      - git
+      - python3
+      - python3-pip
+      - nginx
+      - firewalld
+    state: present
+
+- name: Ensure services are enabled
+  systemd:
+    name: firewalld
+    enabled: yes
+    state: started

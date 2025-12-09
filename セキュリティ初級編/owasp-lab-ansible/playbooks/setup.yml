@@ -1,0 +1,10 @@
+---
+- name: Setup OWASP Lab Environment
+  hosts: localhost
+  become: true
+
+  roles:
+    - role: common
+    - role: nginx
+    - role: letsencrypt
+    - role: owasp

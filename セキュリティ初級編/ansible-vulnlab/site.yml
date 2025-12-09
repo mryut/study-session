@@ -1,0 +1,10 @@
+---
+- hosts: vulnlab
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  roles:
+    - role: common
+    - role: docker
+    - role: nginx
+    - role: certbot

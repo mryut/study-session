@@ -1,0 +1,159 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  OWASP演習環境 - EC2 + Network Load Balancer構成（Ansible自動適用 + 任意VPC対応）
+  EC2はAmazon Linux 2023、Let's EncryptによるSSL/TLSをEC2側で実施
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: デプロイ先のVPC ID
+
+  NLBSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: NLBを配置するPublic Subnet IDのリスト（例: ["subnet-aaaa","subnet-bbbb"]）
+
+  EC2SubnetId:
+    Type: AWS::EC2::Subnet::Id
+    Description: EC2を配置するPrivate Subnet ID（例: subnet-cccc）
+
+  KeyPairName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Description: SSH接続に使用するキーペア名
+
+  InstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.medium
+      - t3.large
+    Description: EC2インスタンスタイプ
+
+  SSHAllowedIPs:
+    Type: CommaDelimitedList
+    Description: SSH(22)アクセスを許可するIPレンジをカンマ区切りで指定
+
+  GitRepoURL:
+    Type: String
+    Description: Ansibleリポジトリ（例：https://github.com/your-account/owasp-lab-ansible.git）
+
+Resources:
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH, HTTP, and HTTPS
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType: !Ref InstanceType
+      KeyName: !Ref KeyPairName
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64}}"
+      SubnetId: !Ref EC2SubnetId
+      SecurityGroupIds:
+        - !Ref SecurityGroup
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y git ansible python3-pip nginx
+          cd /opt
+          git clone ${GitRepoURL} owasp-lab-ansible
+          cd owasp-lab-ansible/playbooks
+          ansible-playbook setup.yml
+      Tags:
+        - Key: Name
+          Value: OWASP-EC2
+
+  NLB:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Type: network
+      Scheme: internet-facing
+      Subnets: !Ref NLBSubnetIds
+      LoadBalancerAttributes:
+        - Key: load_balancing.cross_zone.enabled
+          Value: true
+      Tags:
+        - Key: Name
+          Value: OWASP-NLB
+
+  TargetGroupHTTP:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 80
+      Protocol: TCP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckProtocol: TCP
+
+  TargetGroupHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Port: 443
+      Protocol: TCP
+      VpcId: !Ref VpcId
+      TargetType: instance
+      HealthCheckProtocol: TCP
+
+  ListenerHTTP:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupHTTP
+      LoadBalancerArn: !Ref NLB
+      Port: 80
+      Protocol: TCP
+
+  ListenerHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupHTTPS
+      LoadBalancerArn: !Ref NLB
+      Port: 443
+      Protocol: TCP
+
+  NLBTargetAttachmentHTTP:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
+    Properties:
+      TargetGroupArn: !Ref TargetGroupHTTP
+      TargetId: !Ref EC2Instance
+      Port: 80
+
+  NLBTargetAttachmentHTTPS:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroupAttachment
+    Properties:
+      TargetGroupArn: !Ref TargetGroupHTTPS
+      TargetId: !Ref EC2Instance
+      Port: 443
+
+Outputs:
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref EC2Instance
+
+  InstancePrivateIP:
+    Description: EC2 Private IP
+    Value: !GetAtt EC2Instance.PrivateIp
+
+  NLBEndpoint:
+    Description: NLB DNS Name
+    Value: !GetAtt NLB.DNSName

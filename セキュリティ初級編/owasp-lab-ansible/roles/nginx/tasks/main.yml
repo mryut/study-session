@@ -1,0 +1,22 @@
+---
+- name: Configure Nginx
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/nginx.conf
+  notify: restart nginx
+
+- name: Ensure nginx is started
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes
+
+- name: Open HTTP/HTTPS ports in firewalld
+  firewalld:
+    service: "{{ item }}"
+    permanent: true
+    state: enabled
+    immediate: yes
+  loop:
+    - http
+    - https

@@ -1,0 +1,21 @@
+---
+- name: Install certbot
+  pip:
+    name: certbot
+
+- name: Generate initial certificate using Let's Encrypt
+  command: >
+    certbot certonly --nginx
+    -d {{ inventory_hostname }}
+    --non-interactive
+    --agree-tos
+    -m admin@{{ inventory_hostname }}
+  args:
+    creates: "/etc/letsencrypt/live/{{ inventory_hostname }}/fullchain.pem"
+
+- name: Setup auto renewal
+  cron:
+    name: "Renew Let's Encrypt certificates"
+    job: "certbot renew --quiet"
+    hour: 3
+    minute: 0

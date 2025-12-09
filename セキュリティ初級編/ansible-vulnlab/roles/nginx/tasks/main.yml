@@ -1,0 +1,26 @@
+---
+- name: Install nginx
+  dnf:
+    name: nginx
+    state: present
+
+- name: Configure nginx reverse proxy
+  copy:
+    dest: /etc/nginx/conf.d/vulnlab.conf
+    content: |
+      server {
+          listen 80;
+          server_name {{ domain_name }};
+
+          location / {
+              proxy_pass http://127.0.0.1:8080;
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+          }
+      }
+
+- name: Enable and start nginx
+  systemd:
+    name: nginx
+    state: started
+    enabled: yes

@@ -1,0 +1,32 @@
+---
+- name: Update system packages
+  dnf:
+    name: "*"
+    state: latest
+
+- name: Install base packages
+  dnf:
+    name:
+      - git
+      - unzip
+      - firewalld
+      - python3-pip
+    state: present
+
+- name: Enable and start firewalld
+  systemd:
+    name: firewalld
+    state: started
+    enabled: yes
+
+- name: Open HTTP and HTTPS ports
+  firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    state: enabled
+  loop:
+    - http
+    - https
+
+- name: Reload firewalld
+  command: firewall-cmd --reload

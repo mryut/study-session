@@ -1,0 +1,42 @@
+---
+- name: Clone OWASP application
+  git:
+    repo: https://github.com/OWASP/NodeGoat.git
+    dest: /var/www/html/owasp-lab
+    version: master
+
+- name: Install Node.js and dependencies
+  dnf:
+    name:
+      - nodejs
+      - npm
+    state: present
+
+- name: Install app dependencies
+  npm:
+    path: /var/www/html/owasp-lab
+    production: true
+
+- name: Create systemd service for OWASP app
+  copy:
+    dest: /etc/systemd/system/owasp-lab.service
+    content: |
+      [Unit]
+      Description=OWASP NodeGoat Lab
+      After=network.target
+
+      [Service]
+      WorkingDirectory=/var/www/html/owasp-lab
+      ExecStart=/usr/bin/npm start
+      Restart=always
+      User=ec2-user
+      Environment=NODE_ENV=production
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Enable and start OWASP app
+  systemd:
+    name: owasp-lab
+    enabled: yes
+    state: started
