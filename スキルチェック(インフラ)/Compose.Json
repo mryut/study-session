@@ -1,0 +1,23 @@
+{
+    "title": "@{items('Apply_to_each')?['Question']}",
+    "type": "choice",
+    "choices": [
+        {
+            "displayName": "@{items('Apply_to_each')?['Option1']}",
+            "isCorrect": "@equals(items('Apply_to_each')?['Correct'], items('Apply_to_each')?['Option1'])"
+        },
+        {
+            "displayName": "@{items('Apply_to_each')?['Option2']}",
+            "isCorrect": "@equals(items('Apply_to_each')?['Correct'], items('Apply_to_each')?['Option2'])"
+        },
+        {
+            "displayName": "@{items('Apply_to_each')?['Option3']}",
+            "isCorrect": "@equals(items('Apply_to_each')?['Correct'], items('Apply_to_each')?['Option3'])"
+        },
+        {
+            "displayName": "@{items('Apply_to_each')?['Option4']}",
+            "isCorrect": "@equals(items('Apply_to_each')?['Correct'], items('Apply_to_each')?['Option4'])"
+        }
+    ],
+    "required": true
+}
